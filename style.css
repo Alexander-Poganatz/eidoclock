@@ -118,6 +118,17 @@ a:hover {
 	margin-top: 60px;
 }
 
+.future-night-container
+{
+	margin-top: 60px;
+	height: 75%;
+	overflow: auto;
+	background-color: rgba(0,0, 200, 0.2);
+	padding-left: 20px;
+	padding-right: 20px;
+	text-align: center;
+}
+
 .until-container {
 	max-height: 0;
 	text-align: center;

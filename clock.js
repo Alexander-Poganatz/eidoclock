@@ -1,6 +1,7 @@
 var has_notified = false;
 var nice_background = true;
-var scaled_layout = false;
+var scaled_layout = true;
+var show_future_nights = false;
 var eido_timestamp = 1510884902;
 
 var interval;
@@ -54,6 +55,24 @@ $(function() {
         // Adjust interval rate on a simple layout so the CPU is used less.
         clearInterval(interval);
         interval = setInterval(updateTime, scaled_layout == true ? SCALED_TIME_INTERVAL : NO_SCALED_TIME_INTERVAL);
+    });
+
+    $('#forecastSwitch').on('click', function(){
+        show_future_nights = $('#forecastSwitch').is(':checked');
+        if(show_future_nights)
+        {
+            //listContainer
+            var dates = calculateFutureTimes();
+            var output = generateDateOutput(dates);
+            $('#listContainer').html(output);
+            $('#timeBlock').css('display', 'none');
+            $('#forecastBlock').css('display', 'initial');
+        }
+        else
+        {
+            $('#timeBlock').css('display', 'initial');
+            $('#forecastBlock').css('display', 'none');
+        }
     });
 
     interval = setInterval(updateTime, scaled_layout == true ? SCALED_TIME_INTERVAL : NO_SCALED_TIME_INTERVAL);
@@ -119,8 +138,9 @@ function getCetusTime(fetch, callback)
 			}
 			var syndicate = worldStateData["SyndicateMissions"].find(element => (element["Tag"] == "CetusSyndicate"));
 			timestamp = Math.floor(syndicate["Expiry"]["$date"]["$numberLong"] / 1000);	//The activation time, converted to whole seconds
-			console.log("Fetched Cetus time: ", timestamp);
-			callback(timestamp);
+            console.log("Fetched Cetus time: ", timestamp);
+            callback(timestamp);
+            calculateFutureTimes();
 		},
 		failure: function(xhr, status, error)
 		{
@@ -237,4 +257,52 @@ function updateTime() {
     // $('.time>.ampm').text(((eidotime_in_h >= 12) ? ' pm' : ' am'));
 }
 
+/**
+ * @fn calculateNextExpiryTimeMilli
+ * @brief returns the next expiry date
+ * @param {number} timeInMilli [in] the 
+ * @return the estimated milliseconds of the next time.
+ */
+function calculateNextExpiryTimeMilli(timeInMilli)
+{
+    // I subtract 1125 milliseconds because I was watching bounty expiry times and there is only a 149.981 minute difference.
+    return (timeInMilli + (1000 * 60 * 150)) - 1125;
+}
+
+/**
+ * @fn calculateFutureTimes
+ * @brief Calculates the night/day cycles for the next 24 hour. Also updates eido_timestamp if neccessary.
+ * @param {}
+ * @return an array of dates starting at the next day.
+ */
+function calculateFutureTimes()
+{
+    var forecastArray = [];
+    var endTime = Date.now() + (1000 * 60 * 60 * 36); // 36 hours
+
+    // update eido_time stamp when it is less then the current time, I could move this to the updateTime method....
+    var eido_milli = eido_timestamp * 1000;
+    while(eido_milli < Date.now())
+        eido_milli = calculateNextExpiryTimeMilli(eido_milli);
+
+    eido_timestamp = eido_milli / 1000;
+
+    for(var nextGameDay = eido_milli; nextGameDay < endTime; nextGameDay = calculateNextExpiryTimeMilli(nextGameDay) )
+    {
+        // Add next night.
+        forecastArray.push(new Date(nextGameDay + (1000 * 60 * 100)));
+    }
+    
+    return forecastArray;
+}
+
+function generateDateOutput(dates)
+{
+    var output = "";
+
+    dates.forEach(function(d) {
+        output += '<p>' + d.toLocaleString() + '</p>';
+    });
+    return output;
+}
 
